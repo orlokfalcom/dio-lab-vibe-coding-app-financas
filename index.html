@@ -112,6 +112,17 @@
           </div>
         </div>
 
+        <!-- Limites de Orçamento por Categoria -->
+        <div class="budgets-container glass-subpanel">
+          <div class="budgets-header">
+            <h4>Orçamento por Categoria</h4>
+            <span class="badge badge-cyber">Auto Limites</span>
+          </div>
+          <div id="budgets-list" class="budgets-list">
+            <!-- Renderizado dinamicamente via JS -->
+          </div>
+        </div>
+
         <!-- Transações Recentes -->
         <div class="transactions-container glass-subpanel">
           <div class="transactions-header">
@@ -162,10 +173,31 @@
         <div class="chat-input-area">
           <form id="chat-form" class="chat-form">
             <input type="text" id="chat-input" placeholder="Anote gastos/receitas em linguagem natural..." autocomplete="off">
+            <button type="button" class="btn btn-secondary btn-icon" id="voice-btn" title="Simular gravação de voz">
+              <i data-lucide="mic"></i>
+            </button>
             <button type="submit" class="btn btn-primary btn-icon" id="send-btn">
               <i data-lucide="send"></i>
             </button>
           </form>
+        </div>
+
+        <!-- Overlay de Simulação de Voz -->
+        <div id="voice-overlay" class="voice-overlay" style="display: none;">
+          <div class="voice-card glass-panel animate-pop">
+            <div class="voice-equalizer">
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+            </div>
+            <p class="voice-status">Ouvindo sua voz...</p>
+            <p id="voice-transcription" class="voice-transcription">"..."</p>
+            <button type="button" id="cancel-voice-btn" class="btn btn-secondary">Cancelar</button>
+          </div>
         </div>
       </section>
 
@@ -193,6 +225,17 @@
           <p id="agent-thought-bubble" class="thought-bubble">
             Aguardando interações para iniciar auditoria...
           </p>
+        </div>
+
+        <!-- Mapeamento Sináptico (IA Mind) -->
+        <div class="cognitive-visualizer-container glass-subpanel">
+          <div class="visualizer-header">
+            <i data-lucide="network"></i>
+            <h4>Mapeamento Sináptico (IA Mind)</h4>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="cognitive-canvas"></canvas>
+          </div>
         </div>
 
         <!-- Terminal de Logs do Agente -->
@@ -236,25 +279,45 @@
             <i data-lucide="sliders"></i>
             <h4>Central de Simulação de Cenários</h4>
           </div>
-          <p class="simulation-desc">Adicione eventos simulados para testar o reajuste preditivo da IA.</p>
-          <div class="simulation-actions-grid">
-            <button class="btn btn-sim" id="sim-salary-btn">
-              <i data-lucide="trending-up"></i>
-              <span>+10% Salário</span>
-            </button>
+          <p class="simulation-desc">Ajuste os parâmetros macroeconômicos para ver projeções em tempo real.</p>
+          
+          <div class="sliders-grid">
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">Aumento Salarial</span>
+                <span id="val-sim-salary" class="slider-value">+0%</span>
+              </div>
+              <input type="range" id="slider-salary" min="0" max="100" value="0" step="5" class="cyber-range">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">Custo Extra (Aluguel/etc)</span>
+                <span id="val-sim-rent" class="slider-value">R$ 0</span>
+              </div>
+              <input type="range" id="slider-rent" min="0" max="2000" value="0" step="50" class="cyber-range">
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-info">
+                <span class="slider-label">Risco Inflacionário</span>
+                <span id="val-sim-inflation" class="slider-value">Estável (0%)</span>
+              </div>
+              <input type="range" id="slider-inflation" min="0" max="30" value="0" step="2" class="cyber-range">
+            </div>
+          </div>
+
+          <div class="simulation-buttons">
             <button class="btn btn-sim" id="sim-emergency-btn">
               <i data-lucide="alert-triangle"></i>
-              <span>Despesa Emergência</span>
+              <span>Simular Emergência (R$ 600)</span>
             </button>
-            <button class="btn btn-sim" id="sim-rent-btn">
-              <i data-lucide="home"></i>
-              <span>+R$ 200 Aluguel</span>
-            </button>
-            <button class="btn btn-sim" id="sim-clear-btn" title="Limpar Simulações">
-              <i data-lucide="x-circle"></i>
-              <span>Limpar Cenários</span>
+            <button class="btn btn-secondary btn-sim-clear" id="sim-clear-btn" title="Reiniciar Cenários">
+              <i data-lucide="rotate-ccw"></i>
+              <span>Limpar</span>
             </button>
           </div>
+
           <div id="active-sim-badge" class="active-sim-badge" style="display: none;">
             Cenários ativos: <span id="active-sim-list">Nenhum</span>
           </div>

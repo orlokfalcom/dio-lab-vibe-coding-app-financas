@@ -85,8 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
   loadData();
   initTheme();
   setupEventListeners();
+  setupVoiceSimulation();
+  setupSliderListeners();
   updateDashboard();
   initChat();
+  
+  // Start the Brain Synaptic Mind canvas
+  initCognitiveCanvas();
   
   // Start the Vibe Autonomous Cognitive Engine Loop
   startAgentEngine();
@@ -100,7 +105,20 @@ function loadData() {
       state = JSON.parse(savedState);
       // Ensure simulations block is initialized
       if (!state.simulations) {
-        state.simulations = { salaryMultiplier: 1.0, extraExpense: 0, emergencyCount: 0 };
+        state.simulations = { salaryMultiplier: 1.0, extraExpense: 0, emergencyCount: 0, inflationRate: 0 };
+      } else {
+        if (state.simulations.inflationRate === undefined) state.simulations.inflationRate = 0;
+      }
+      // Ensure budgets block is initialized
+      if (!state.budgets) {
+        state.budgets = {
+          'Alimentação': 600.00,
+          'Transporte': 300.00,
+          'Lazer': 400.00,
+          'Saúde': 300.00,
+          'Educação': 500.00,
+          'Outros': 300.00
+        };
       }
     } catch (e) {
       console.error("Erro ao carregar dados do LocalStorage, reiniciando...", e);
@@ -118,7 +136,16 @@ function seedDefaultData() {
   state.simulations = {
     salaryMultiplier: 1.0,
     extraExpense: 0,
-    emergencyCount: 0
+    emergencyCount: 0,
+    inflationRate: 0
+  };
+  state.budgets = {
+    'Alimentação': 600.00,
+    'Transporte': 300.00,
+    'Lazer': 400.00,
+    'Saúde': 300.00,
+    'Educação': 500.00,
+    'Outros': 300.00
   };
   saveState();
 }
@@ -238,74 +265,72 @@ function setupEventListeners() {
    SCENARIO SIMULATOR ACTIONS
    ========================================================================== */
 function setupSimulationListeners() {
-  const simSalary = document.getElementById('sim-salary-btn');
   const simEmergency = document.getElementById('sim-emergency-btn');
-  const simRent = document.getElementById('sim-rent-btn');
   const simClear = document.getElementById('sim-clear-btn');
 
-  simSalary.addEventListener('click', () => {
-    state.simulations.salaryMultiplier = 1.10;
-    saveState();
-    logToTerminal("CENÁRIO ATIVADO: Aumento Salarial de +10% aplicado para projeções futuras.", "system");
-    updateDashboard();
-    triggerAutonomousAction("Calculando projeção com aumento de salário de 10%... Nova receita recorrente detectada.");
-    updateActiveSimBadge();
-  });
+  if (simEmergency) {
+    simEmergency.addEventListener('click', () => {
+      state.simulations.emergencyCount++;
+      
+      // Create a simulated transaction
+      const emergencyTrans = {
+        id: 'sim-e-' + Date.now(),
+        description: `[SIMULADO] Despesa de Emergência #${state.simulations.emergencyCount}`,
+        amount: 600.00,
+        type: 'expense',
+        category: 'Saúde',
+        date: new Date().toISOString()
+      };
+      
+      state.transactions.push(emergencyTrans);
+      saveState();
+      logToTerminal(`CENÁRIO ATIVADO: Despesa médica emergencial simulada de R$ 600,00 anotada.`, "audit");
+      updateDashboard();
+      triggerAutonomousAction("Despesa médica de emergência de R$ 600,00 aplicada. Recalculando velocidade de caixa.");
+      updateActiveSimBadge();
+    });
+  }
 
-  simEmergency.addEventListener('click', () => {
-    state.simulations.emergencyCount++;
-    
-    // Create a simulated transaction
-    const emergencyTrans = {
-      id: 'sim-e-' + Date.now(),
-      description: `[SIMULADO] Despesa de Emergência #${state.simulations.emergencyCount}`,
-      amount: 600.00,
-      type: 'expense',
-      category: 'Saúde',
-      date: new Date().toISOString()
-    };
-    
-    state.transactions.push(emergencyTrans);
-    saveState();
-    logToTerminal(`CENÁRIO ATIVADO: Despesa médica emergencial simulada de R$ 600,00 anotada.`, "audit");
-    updateDashboard();
-    triggerAutonomousAction("Despesa médica de emergência de R$ 600,00 aplicada. Recalculando velocidade de caixa.");
-    updateActiveSimBadge();
-  });
-
-  simRent.addEventListener('click', () => {
-    state.simulations.extraExpense += 200.00;
-    saveState();
-    logToTerminal(`CENÁRIO ATIVADO: Aumento fixo de R$ 200,00 adicionado às despesas mensais futuras (Aluguel).`, "system");
-    updateDashboard();
-    triggerAutonomousAction("Despesa recorrente de aluguel inflada em R$ 200,00. Analisando sustentabilidade do fluxo.");
-    updateActiveSimBadge();
-  });
-
-  simClear.addEventListener('click', () => {
-    // Filter out simulated transactions
-    state.transactions = state.transactions.filter(t => !t.id.startsWith('sim-e-'));
-    state.simulations = {
-      salaryMultiplier: 1.0,
-      extraExpense: 0,
-      emergencyCount: 0
-    };
-    saveState();
-    logToTerminal("CENÁRIOS LIMPOS: Todos os multiplicadores e despesas simuladas foram removidos.", "system");
-    updateDashboard();
-    triggerAutonomousAction("Redefinindo projeções financeiras para valores reais do usuário. Processando...");
-    updateActiveSimBadge();
-  });
+  if (simClear) {
+    simClear.addEventListener('click', () => {
+      // Filter out simulated transactions
+      state.transactions = state.transactions.filter(t => !t.id.startsWith('sim-e-'));
+      state.simulations = {
+        salaryMultiplier: 1.0,
+        extraExpense: 0,
+        emergencyCount: 0,
+        inflationRate: 0
+      };
+      saveState();
+      logToTerminal("CENÁRIOS LIMPOS: Sliders, despesas simuladas e multiplicadores reiniciados.", "system");
+      
+      updateDashboard();
+      triggerAutonomousAction("Redefinindo projeções financeiras para valores reais. Processando...");
+      updateActiveSimBadge();
+    });
+  }
 }
 
 function updateActiveSimBadge() {
   const badge = document.getElementById('active-sim-badge');
   const list = document.getElementById('active-sim-list');
+  if (!badge || !list) return;
+
   const sims = [];
   
-  if (state.simulations.salaryMultiplier > 1.0) sims.push("Aumento Salarial (+10%)");
-  if (state.simulations.extraExpense > 0) sims.push(`Aumento Aluguel (+R$ ${state.simulations.extraExpense.toFixed(0)})`);
-  if (state.transactions.some(t => t.id.startsWith('sim-e-'))) sims.push(`Despesa Emergencial`);
+  if (state.simulations.salaryMultiplier > 1.0) {
+    const pct = Math.round((state.simulations.salaryMultiplier - 1.0) * 100);
+    sims.push(`Salário (+${pct}%)`);
+  }
+  if (state.simulations.extraExpense > 0) {
+    sims.push(`Custo Extra (+R$ ${state.simulations.extraExpense.toFixed(0)})`);
+  }
+  if (state.simulations.inflationRate > 0) {
+    sims.push(`Inflação (+${state.simulations.inflationRate}%)`);
+  }
+  if (state.transactions.some(t => t.id.startsWith('sim-e-'))) {
+    sims.push(`Despesa Emergencial`);
+  }
 
   if (sims.length > 0) {
     badge.style.display = 'block';
@@ -386,8 +411,10 @@ function updateDashboard() {
 
   // Render lists and charts
   renderTransactions();
+  renderCategoryBudgets();
   updateChart();
   updateActiveSimBadge();
+  syncSlidersUI();
 
   // Run autonomous computations for projections immediately
   recalculateProjections(balanceTotal, incomeTotal, expensesTotal);
@@ -642,7 +669,8 @@ function recalculateProjections(currentBalance, baseIncome, baseExpense) {
 
   // Apply Simulation modifiers
   const simulatedMonthlyIncome = monthlyIncome * state.simulations.salaryMultiplier;
-  const simulatedMonthlyExpense = monthlyExpense + state.simulations.extraExpense;
+  const inflationMultiplier = 1.0 + (state.simulations.inflationRate || 0) / 100.0;
+  const simulatedMonthlyExpense = (monthlyExpense + state.simulations.extraExpense) * inflationMultiplier;
 
   // Projections: Balance + (Income - Expense) * Months
   const netMonthly = simulatedMonthlyIncome - simulatedMonthlyExpense;
@@ -1016,3 +1044,311 @@ function parseMarkdown(text) {
 
   return html;
 }
+
+/* ==========================================================================
+   NEW GRAPHICAL ENGINE & INTERACTIVE LOGIC ADDITIONS
+   ========================================================================== */
+
+// Voice Recognition simulation
+const voicePhrases = [
+  "Ganhei 4500 reais de salário ontem",
+  "Gastei 120 com almoço no restaurante",
+  "Paguei 35 reais de corrida de Uber",
+  "Recebi 400 reais de freela extra",
+  "Gastei 250 de supermercado semanal",
+  "Paguei 90 reais de mensalidade do curso",
+  "Comprei ingressos de cinema por 65 reais",
+  "Gastei 150 na farmácia com remédios",
+  "Paguei 200 reais de conta de luz"
+];
+
+let voiceRecordingTimeout = null;
+
+function setupVoiceSimulation() {
+  const voiceBtn = document.getElementById('voice-btn');
+  const voiceOverlay = document.getElementById('voice-overlay');
+  const cancelVoiceBtn = document.getElementById('cancel-voice-btn');
+  const voiceTranscription = document.getElementById('voice-transcription');
+
+  if (!voiceBtn || !voiceOverlay) return;
+
+  voiceBtn.addEventListener('click', () => {
+    // Open voice simulation overlay
+    voiceOverlay.style.display = 'flex';
+    voiceTranscription.innerText = '"..."';
+    logToTerminal("Iniciando gravação de entrada de voz simulada.", "system");
+    updateCognitiveVisualizerSpeed(true);
+
+    // Simulate sound wave processing and transcription
+    let step = 0;
+    const phrase = voicePhrases[Math.floor(Math.random() * voicePhrases.length)];
+    const words = phrase.split(' ');
+    let currentText = '';
+    
+    function streamWords() {
+      if (step < words.length) {
+        currentText += (step === 0 ? '' : ' ') + words[step];
+        voiceTranscription.innerText = `"${currentText}..."`;
+        step++;
+        voiceRecordingTimeout = setTimeout(streamWords, 300 + Math.random() * 150);
+      } else {
+        voiceTranscription.innerText = `"${phrase}"`;
+        voiceTranscription.style.color = 'var(--success-text)';
+        
+        voiceRecordingTimeout = setTimeout(() => {
+          voiceOverlay.style.display = 'none';
+          voiceTranscription.style.color = 'var(--text-primary)';
+          addUserMessage(phrase);
+          processUserPhrase(phrase);
+          updateCognitiveVisualizerSpeed(false);
+        }, 1000);
+      }
+    }
+    
+    voiceRecordingTimeout = setTimeout(streamWords, 700);
+  });
+
+  cancelVoiceBtn.addEventListener('click', () => {
+    if (voiceRecordingTimeout) clearTimeout(voiceRecordingTimeout);
+    voiceOverlay.style.display = 'none';
+    voiceTranscription.style.color = 'var(--text-primary)';
+    logToTerminal("Entrada de voz cancelada pelo usuário.", "system");
+    updateCognitiveVisualizerSpeed(false);
+  });
+}
+
+// Synaptic network canvas simulation
+let canvasParticles = [];
+let canvasAnimationId = null;
+let particleSpeedMultiplier = 0.8;
+
+function getCSSColor(varName, fallback) {
+  const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return val || fallback;
+}
+
+function initCognitiveCanvas() {
+  const canvas = document.getElementById('cognitive-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  
+  function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+  }
+  
+  resizeCanvas();
+  window.removeEventListener('resize', resizeCanvas);
+  window.addEventListener('resize', resizeCanvas);
+  
+  canvasParticles = [];
+  const particleCount = 24;
+  for (let i = 0; i < particleCount; i++) {
+    canvasParticles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
+      radius: Math.random() * 1.8 + 0.8
+    });
+  }
+  
+  function animate() {
+    if (!document.getElementById('cognitive-canvas')) return; // Exit if unmounted
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const primaryColor = getCSSColor('--primary', '#8b5cf6');
+    const cyberColor = getCSSColor('--cyber-neon', '#06b6d4');
+    const connectionColor = getCSSColor('--panel-border', 'rgba(255, 255, 255, 0.08)');
+    
+    // Draw connection lines
+    ctx.lineWidth = 0.6;
+    for (let i = 0; i < canvasParticles.length; i++) {
+      for (let j = i + 1; j < canvasParticles.length; j++) {
+        const dx = canvasParticles[i].x - canvasParticles[j].x;
+        const dy = canvasParticles[i].y - canvasParticles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 60) {
+          const alpha = (1 - dist / 60) * 0.22;
+          ctx.strokeStyle = connectionColor.includes('rgba') ? connectionColor : `rgba(139, 92, 246, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(canvasParticles[i].x, canvasParticles[i].y);
+          ctx.lineTo(canvasParticles[j].x, canvasParticles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    // Draw particles
+    canvasParticles.forEach((p, idx) => {
+      p.x += p.vx * particleSpeedMultiplier;
+      p.y += p.vy * p.radius * 0.5 * particleSpeedMultiplier;
+      
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      
+      ctx.fillStyle = idx % 2 === 0 ? primaryColor : cyberColor;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    canvasAnimationId = requestAnimationFrame(animate);
+  }
+  
+  if (canvasAnimationId) cancelAnimationFrame(canvasAnimationId);
+  animate();
+}
+
+function updateCognitiveVisualizerSpeed(isThinking) {
+  particleSpeedMultiplier = isThinking ? 3.8 : 0.8;
+}
+
+// Category Budgets Logic
+function renderCategoryBudgets() {
+  const budgetsList = document.getElementById('budgets-list');
+  if (!budgetsList) return;
+  
+  budgetsList.innerHTML = '';
+  
+  const categoryLimits = state.budgets || {
+    'Alimentação': 600.00,
+    'Transporte': 300.00,
+    'Lazer': 400.00,
+    'Saúde': 300.00,
+    'Educação': 500.00,
+    'Outros': 300.00
+  };
+
+  const expensesPerCategory = {};
+  state.transactions.forEach(t => {
+    if (t.type === 'expense') {
+      expensesPerCategory[t.category] = (expensesPerCategory[t.category] || 0) + t.amount;
+    }
+  });
+
+  const activeExpenseCategories = ['Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Outros'];
+
+  activeExpenseCategories.forEach(cat => {
+    const limit = categoryLimits[cat] || 300.00;
+    const rawSpent = expensesPerCategory[cat] || 0;
+    
+    // Inflate budget spent by simulated inflation Rate
+    const inflationMultiplier = 1.0 + (state.simulations.inflationRate || 0) / 100.0;
+    const spent = rawSpent * inflationMultiplier;
+    
+    const percentage = Math.min(100, Math.round((spent / limit) * 100));
+    
+    let colorClass = 'normal';
+    let statusText = 'Orçamento sob controle';
+    
+    if (percentage >= 100) {
+      colorClass = 'danger';
+      statusText = 'Limite excedido! Reduzir imediatamente.';
+    } else if (percentage >= 75) {
+      colorClass = 'warning';
+      statusText = 'Atenção: Consumo elevado.';
+    } else if (percentage >= 40) {
+      statusText = 'Consumo moderado';
+    }
+    
+    const budgetItem = document.createElement('div');
+    budgetItem.className = 'budget-item';
+    
+    const emoji = categoryIcons[cat] || '🏷️';
+    
+    budgetItem.innerHTML = `
+      <div class="budget-info">
+        <span class="budget-meta">${emoji} ${cat}</span>
+        <span class="budget-percentage">${percentage}% (${formatCurrency(spent)} / ${formatCurrency(limit)})</span>
+      </div>
+      <div class="budget-bar-bg">
+        <div class="budget-bar-fill ${colorClass}" style="width: ${percentage}%"></div>
+      </div>
+      <span class="budget-status-text">${statusText}</span>
+    `;
+    budgetsList.appendChild(budgetItem);
+  });
+}
+
+// Slider Scenario Builder Events
+function setupSliderListeners() {
+  const sliderSalary = document.getElementById('slider-salary');
+  const sliderRent = document.getElementById('slider-rent');
+  const sliderInflation = document.getElementById('slider-inflation');
+
+  if (!sliderSalary) return;
+
+  // Track inputs
+  sliderSalary.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    state.simulations.salaryMultiplier = 1.0 + val / 100.0;
+    document.getElementById('val-sim-salary').innerText = `+${val}%`;
+    saveState();
+    updateDashboard();
+    updateCognitiveVisualizerSpeed(true);
+    debouncedTriggerAction(`Aumento salarial reajustado via painel para +${val}%`);
+  });
+
+  sliderRent.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    state.simulations.extraExpense = val;
+    document.getElementById('val-sim-rent').innerText = formatCurrency(val);
+    saveState();
+    updateDashboard();
+    updateCognitiveVisualizerSpeed(true);
+    debouncedTriggerAction(`Aumento fixo de despesas simulado para ${formatCurrency(val)}`);
+  });
+
+  sliderInflation.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    state.simulations.inflationRate = val;
+    document.getElementById('val-sim-inflation').innerText = val === 0 ? 'Estável (0%)' : `Risco de +${val}%`;
+    saveState();
+    updateDashboard();
+    updateCognitiveVisualizerSpeed(true);
+    debouncedTriggerAction(`Fator de risco inflacionário geral reajustado para +${val}%`);
+  });
+}
+
+// Sync values from state to UI inputs
+function syncSlidersUI() {
+  const sliderSalary = document.getElementById('slider-salary');
+  const sliderRent = document.getElementById('slider-rent');
+  const sliderInflation = document.getElementById('slider-inflation');
+
+  const valSalary = document.getElementById('val-sim-salary');
+  const valRent = document.getElementById('val-sim-rent');
+  const valInflation = document.getElementById('val-sim-inflation');
+
+  if (sliderSalary) {
+    const pct = Math.round((state.simulations.salaryMultiplier - 1.0) * 100);
+    if (parseInt(sliderSalary.value) !== pct) sliderSalary.value = pct;
+    if (valSalary) valSalary.innerText = `+${pct}%`;
+  }
+
+  if (sliderRent) {
+    const rent = state.simulations.extraExpense || 0;
+    if (parseInt(sliderRent.value) !== rent) sliderRent.value = rent;
+    if (valRent) valRent.innerText = formatCurrency(rent);
+  }
+
+  if (sliderInflation) {
+    const infl = state.simulations.inflationRate || 0;
+    if (parseInt(sliderInflation.value) !== infl) sliderInflation.value = infl;
+    if (valInflation) valInflation.innerText = infl === 0 ? 'Estável (0%)' : `Risco de +${infl}%`;
+  }
+}
+
+// Debounce terminal outputs to prevent spamming
+let triggerActionTimeout = null;
+function debouncedTriggerAction(message) {
+  if (triggerActionTimeout) clearTimeout(triggerActionTimeout);
+  triggerActionTimeout = setTimeout(() => {
+    triggerAutonomousAction(message);
+    updateCognitiveVisualizerSpeed(false);
+  }, 750);
+}
+
