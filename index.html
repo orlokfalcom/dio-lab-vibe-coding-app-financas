@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Finanças | Organização Financeira Pessoal com Vibe Coding</title>
+  <!-- Google Fonts: Outfit and Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <div class="logo-text">
+          <h1>Vibe Finanças</h1>
+          <span>Vibe Coding Challenge</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="reset-btn" class="btn btn-secondary" title="Reiniciar dados do app">
+          <i data-lucide="rotate-ccw"></i>
+          <span>Resetar</span>
+        </button>
+        <button id="theme-toggle" class="btn btn-icon" title="Alternar tema">
+          <i data-lucide="sun"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="app-main">
+      <!-- Coluna Esquerda: Dashboard -->
+      <section class="dashboard-section glass-panel">
+        <div class="section-header">
+          <i data-lucide="layout-dashboard" class="header-icon"></i>
+          <h2>Painel Financeiro</h2>
+        </div>
+
+        <!-- Indicadores Rápidos -->
+        <div class="indicators-grid">
+          <div class="indicator-card balance">
+            <span class="card-label">Saldo Atual</span>
+            <h3 id="total-balance">R$ 0,00</h3>
+            <div class="trend text-success" id="balance-trend">
+              <i data-lucide="arrow-up-right"></i>
+              <span>No controle</span>
+            </div>
+          </div>
+          <div class="indicator-card income">
+            <span class="card-label">Receitas</span>
+            <h3 id="total-income">R$ 0,00</h3>
+            <div class="trend">
+              <i data-lucide="plus-circle" class="text-success-dim"></i>
+            </div>
+          </div>
+          <div class="indicator-card expenses">
+            <span class="card-label">Despesas</span>
+            <h3 id="total-expenses">R$ 0,00</h3>
+            <div class="trend">
+              <i data-lucide="minus-circle" class="text-danger-dim"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico e Metas -->
+        <div class="dashboard-details">
+          <!-- Gráfico de Gastos -->
+          <div class="chart-container glass-subpanel">
+            <h4>Distribuição de Gastos</h4>
+            <div class="chart-wrapper">
+              <canvas id="expenses-chart"></canvas>
+              <div id="no-data-msg" class="no-data">
+                <i data-lucide="pie-chart"></i>
+                <p>Nenhuma despesa registrada ainda.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metas -->
+          <div class="goals-container glass-subpanel">
+            <div class="goal-header">
+              <h4>Meta de Economia Mensal</h4>
+              <button id="edit-goal-btn" class="btn-edit" title="Editar Meta">
+                <i data-lucide="edit-3"></i>
+              </button>
+            </div>
+            <div class="goal-card">
+              <div class="goal-progress-info">
+                <span id="goal-progress-text">Salvo: R$ 0,00 / R$ 500,00</span>
+                <span id="goal-percentage">0%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div id="goal-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+              </div>
+              <div id="goal-status-msg" class="goal-message">
+                Configure receitas e despesas para ver o progresso da meta!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transações Recentes -->
+        <div class="transactions-container glass-subpanel">
+          <div class="transactions-header">
+            <h4>Transações Registradas</h4>
+            <span class="badge" id="transactions-count">0</span>
+          </div>
+          <div class="transactions-list-wrapper">
+            <ul id="transactions-list" class="transactions-list">
+              <!-- Inserido dinamicamente via JS -->
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coluna Direita: Chat com o Agente -->
+      <section class="chat-section glass-panel">
+        <div class="section-header chat-header">
+          <div class="agent-profile">
+            <div class="agent-avatar">
+              <i data-lucide="bot"></i>
+              <span class="status-dot"></span>
+            </div>
+            <div class="agent-info">
+              <h2>Vibe</h2>
+              <span class="status-text">Online & Atento</span>
+            </div>
+          </div>
+          <span class="badge badge-accent">Agente de Finanças</span>
+        </div>
+
+        <!-- Histórico de Mensagens -->
+        <div class="chat-history" id="chat-history">
+          <!-- Mensagens iniciais do Agente inseridas via JS -->
+        </div>
+
+        <!-- Sugestões de Transações Rápidas -->
+        <div class="suggestions-area">
+          <span class="suggestion-label">Experimente testar:</span>
+          <div class="suggestions-list">
+            <button class="btn-suggestion" data-phrase="Ganhei R$ 2500 de salário hoje">💰 Recebi salário</button>
+            <button class="btn-suggestion" data-phrase="Gastei R$ 45 com pizza ontem">🍕 Gastei com pizza</button>
+            <button class="btn-suggestion" data-phrase="Paguei 60 reais de Uber">🚗 Paguei Uber</button>
+            <button class="btn-suggestion" data-phrase="Comprei um curso por R$ 120">📚 Comprei curso</button>
+            <button class="btn-suggestion" data-phrase="Dica de economia para hoje">💡 Pedir dica de economia</button>
+          </div>
+        </div>
+
+        <!-- Input de Mensagem -->
+        <div class="chat-input-area">
+          <form id="chat-form" class="chat-form">
+            <input type="text" id="chat-input" placeholder="Escreva o que você gastou ou ganhou... (ex: gastei 50 no mercado)" autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-icon" id="send-btn">
+              <i data-lucide="send"></i>
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal para Configurar Meta -->
+  <div id="goal-modal" class="modal-overlay">
+    <div class="modal-content glass-panel">
+      <h3>Definir Meta de Economia</h3>
+      <p>Configure sua meta de economia mensal para acompanhar seu progresso no painel.</p>
+      <div class="form-group">
+        <label for="goal-input-value">Valor da Meta (R$)</label>
+        <input type="number" id="goal-input-value" min="0" placeholder="Ex: 500">
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-goal-btn" class="btn btn-secondary">Cancelar</button>
+        <button id="save-goal-btn" class="btn btn-primary">Salvar Meta</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <!-- Initialize Lucide Icons -->
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
