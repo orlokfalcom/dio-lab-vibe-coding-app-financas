@@ -1,70 +1,85 @@
-# Plano de MVP e Fluxo de Telas - Vibe Finanças
+# Plano de MVP e Fluxo de Telas - Vibe Finanças (v2 Extreme)
 
-Este documento descreve as diretrizes de design, o tom de voz do Agente Financeiro e a jornada do usuário no MVP da aplicação.
+Este documento descreve as diretrizes de design, a arquitetura do **Motor de IA Autônomo** (Vibe Cognitive Engine) e o fluxo do usuário no aplicativo.
 
 ---
 
 ## 1. O Agente Financeiro: Persona e Tom de Voz
 
-O Agente Financeiro do **Vibe Finanças** chama-se **Vibe**. Ele não se comporta como um gerente de banco tradicional ou um robô analítico frio.
-
-* **Nome**: Vibe
-* **Personalidade**: Um amigo empático, inteligente e otimista, que entende que lidar com dinheiro pode ser estressante e busca desmistificar esse processo.
-* **Tom de Voz**:
-  * **Acolhedor e Calmo**: Sempre usa palavras encorajadoras. Nunca julga o usuário por gastar dinheiro, mas o ajuda a refletir.
-  * **Simples e Acessível**: Evita termos técnicos de economia (como "amortização", "superávit") a menos que seja estritamente necessário, explicando-os de forma simples.
-  * **Conciso**: Dá respostas diretas e fáceis de ler no chat do celular.
-  * **Exemplo de Resposta**:
-    * *Usuário*: "gastei 80 reais com japa hoje à noite."
-    * *Vibe*: "Registrado! R$ 80,00 em Alimentação. 🍣 Nada como um sushi para relaxar! Notei que essa semana seus gastos com janta fora subiram um pouco. Que tal tentarmos cozinhar algo amanhã para manter a meta de economia no trilho?"
+O Agente Financeiro do **Vibe Finanças** chama-se **Vibe**. Ele se comporta de duas maneiras:
+1. **Chat Conversacional (Interface Ativa)**: Amigável, empático, acolhedor e direto. Guia o usuário no chat.
+2. **Motor Autônomo (Interface Passiva/Cognitiva)**: Roda em segundo plano simulando auditoria de gastos, gerando análises e criando logs de pensamento. Seu tom é de um "analista silencioso mas proativo", detalhando seu raciocínio lógico em um terminal de logs integrado.
 
 ---
 
-## 2. Fluxo Conceitual de Telas
+## 2. Arquitetura do Vibe Cognitive Engine
 
-O aplicativo foi projetado como uma **Single Page Application (SPA)** focada em duas colunas principais no desktop (ou abas deslizantes no mobile):
-
-### Tela Principal (Painel Unificado)
+O motor autônomo opera em um ciclo contínuo de **Perceber -> Pensar -> Agir**:
 
 ```
-+-------------------------------------------------------+
-|  VIBE FINANÇAS 💸                      [Tema: Escuro] |
-+---------------------------+---------------------------+
-| COLUNA 1: DASHBOARD VISUAL| COLUNA 2: CHAT COM O VIBE |
-|                           |                           |
-| [ Saldo: R$ 1.420,00 ]    | [Vibe]: Olá! O que você   |
-| [ Receitas: R$ 2.000 ]    | comprou ou recebeu hoje?  |
-| [ Despesas: R$ 580   ]    |                           |
-|                           | [Usuário]: gastei 30 com  |
-| +-----------------------+ | Uber.                     |
-| | GRÁFICO DE GASTOS     | |                           |
-| |   (Pizza / Rosca)     | | [Vibe]: R$ 30,00 salvo  |
-| | Alimentação | Lazer   | | em Transporte! 🚗        |
-| +-----------------------+ |                           |
-|                           | +-----------------------+ |
-| [ Meta: Salvar R$ 500  ]  | | [Digite sua transação]| |
-| Progress: [=====   ] 60%  | +-----------------------+ |
-+---------------------------+---------------------------+
+      +------------------+
+      |    PERCEBER      | <--- Entrada do Usuário (Chat, Transações, Simulações)
+      +--------+---------+
+               |
+               v
+      +------------------+
+      |     PENSAR       | ---> Atualiza "Pensamentos do Agente" no Painel
+      +--------+---------+      Calcula Projeções e Audita Limites
+               |
+               v
+      +------------------+
+      |      AGIR        | ---> Imprime logs no Terminal do Agente
+      +------------------+      Atualiza Dashboard, Gráficos e emite Insights
 ```
 
-#### Elementos e Fluxos:
-1. **Header**: Logo minimalista "Vibe Finanças", botão de alternar tema (Dark/Light) e botão de reset de dados para testes.
-2. **Coluna Esquerda - Painel Analítico**:
-   * **Indicadores Rápidos**: Cards com Saldo, Receitas e Despesas totais.
-   * **Gráfico de Pizza Interativo**: Distribuição percentual de despesas por categoria em tempo real (Alimentação, Transporte, Lazer, Saúde, Outros).
-   * **Metas Financeiras**: Barra de progresso visual de economia baseada nas despesas registradas em relação ao salário/receita.
-3. **Coluna Direita - Central de Chat**:
-   * Área de mensagens rolável que inicia com uma mensagem amigável de boas-vindas do Vibe.
-   * Campo de entrada de texto ("Escreva o que você gastou ou ganhou...") e botão de envio rápido.
-   * Animação de digitação ("Vibe está pensando...") para simular a resposta em tempo real.
+* **Perceber**: Observa qualquer mudança no estado das transações ou no acionamento de simulações.
+* **Pensar**:
+  * Executa projeções financeiras para 1, 3 e 6 meses.
+  * Verifica se os gastos por categoria excederam os limites saudáveis (ex: Alimentação > 40% das despesas).
+  * Avalia a velocidade de economia em relação à meta mensal.
+* **Agir**:
+  * Imprime logs detalhados de auditoria no console.
+  * Altera o status cognitivo ("Auditando", "Projetando", "Finalizado").
+  * Alimenta o chat com insights de economia ou atualiza o saldo futuro simulado.
 
 ---
 
-## 3. Plano de Validação Inicial (Métricas do MVP)
+## 3. Fluxo Conceitual de Telas (Layout de 3 Colunas)
 
-Para medir se o MVP cumpre o seu propósito de reduzir o esforço de preenchimento e engajar o usuário, acompanharemos as seguintes métricas conceituais:
+Esta versão aprimorada usa um layout de 3 colunas no desktop para dar visibilidade total ao motor de IA:
 
-1. **Taxa de Sucesso de Conversão de Texto**: Percentual de frases escritas pelo usuário que o sistema consegue interpretar e categorizar com sucesso sem precisar de correção manual. (Alvo: > 85%).
-2. **Tempo Médio de Registro**: O tempo que o usuário gasta desde a abertura do app até a confirmação da transação no chat. (Alvo: < 6 segundos).
-3. **Frequência de Uso (Engajamento)**: Quantas vezes o usuário interage com o Vibe durante a semana. Um app tradicional é aberto uma vez por mês; queremos que o Vibe Finanças seja usado diariamente como um diário de finanças. (Alvo: 4+ acessos por semana).
-4. **Taxa de Alcance de Metas**: Porcentagem de usuários que conseguem atingir a meta mensal proposta com a ajuda dos lembretes e insights do Vibe. (Alvo: > 60%).
+```
++-------------------------------------------------------------------------------+
+|  VIBE FINANÇAS 💸  [Tema: Escuro]                              [Resetar Dados] |
++-----------------------+-----------------------+-------------------------------+
+| COLUNA 1: DASHBOARD   | COLUNA 2: CHAT        | COLUNA 3: MOTOR AUTÔNOMO      |
+|                       |                       |                               |
+| [ Saldo: R$ 1.420 ]   | [Vibe]: Olá! O que    | ** STATUS: PENSANDO **        |
+| [ Receitas: R$ 2.000 ]| comprou hoje?         | [Pensamento]:                 |
+| [ Despesas: R$ 580 ]  |                       | "Analisando histórico e       |
+|                       | [Usuário]: gastei 30  | projetando 6 meses..."        |
+| +-------------------+ | com Uber.             |                               |
+| | GRÁFICO DE GASTOS | |                       | CONSOLE DE LOGS DO AGENTE:    |
+| |   (Doughnut)      | | [Vibe]: R$ 30,00      | > [09:12] Iniciando Auditoria |
+| +-------------------+ | anotado em            | > [09:12] 4 transações lidas  |
+|                       | Transporte! 🚗        | > [09:13] Projeção: R$ 2.040  |
+| [ Meta: R$ 500 ]      |                       |                               |
+| Progresso: [==== ] 60%| +-------------------+ | SIMULADOR DE CENÁRIOS:        |
+|                       | | [Digite transação]| | [Simular Aumento de Salário ] |
+|                       | +-------------------+ | [Simular Despesa Médica     ] |
++-----------------------+-----------------------+-------------------------------+
+```
+
+### Detalhes do Novo Painel (Coluna 3):
+1. **Cognitive State Indicator**: Cabeçalho animado que mostra a atividade do agente (ex: `STATUS: COGNITION ACTIVE` com efeito de pulso).
+2. **Pensamentos do Vibe**: Balão contendo o texto em tempo real de suas reflexões analíticas.
+3. **Terminal de Logs**: Área preta com fonte verde neon que rola automaticamente, exibindo as etapas lógicas que a IA executou autonomamente.
+4. **Central de Simulação**: Botões rápidos de eventos macroeconômicos que demonstram como o motor de IA se adapta a eventos inesperados.
+
+---
+
+## 4. Plano de Validação Inicial (Métricas do MVP)
+
+1. **Tempo de Resposta do Motor**: Tempo que o motor leva para recalcular projeções e reescrever logs após uma transação. (Alvo: < 500ms).
+2. **Entendimento de Cenários**: O usuário consegue compreender as projeções do terminal sem precisar ler relatórios externos.
+3. **Visual WOW Factor**: Taxa de engajamento e surpresa positiva dos usuários ao verem o motor "pensar" em tempo real no terminal.

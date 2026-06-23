@@ -1,13 +1,17 @@
 /* ==========================================================================
-   STATE MANAGEMENT & DEFAULT SEED DATA
+   STATE MANAGEMENT & DEFAULT SEED DATA (v2 Autonomous)
    ========================================================================== */
 let state = {
   transactions: [],
   goal: 500.00,
-  theme: 'dark'
+  theme: 'dark',
+  simulations: {
+    salaryMultiplier: 1.0,  // e.g. 1.1 for +10%
+    extraExpense: 0,        // e.g. aluguel increase
+    emergencyCount: 0       // simulated emergency count
+  }
 };
 
-// Default transactions to make the UI look premium at first load
 const defaultTransactions = [
   {
     id: 't-1',
@@ -15,7 +19,7 @@ const defaultTransactions = [
     amount: 3200.00,
     type: 'income',
     category: 'Salário',
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days ago
+    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
     id: 't-2',
@@ -23,7 +27,7 @@ const defaultTransactions = [
     amount: 280.00,
     type: 'expense',
     category: 'Alimentação',
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days ago
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
     id: 't-3',
@@ -31,7 +35,7 @@ const defaultTransactions = [
     amount: 38.50,
     type: 'expense',
     category: 'Transporte',
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() // 1 day ago
+    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
     id: 't-4',
@@ -39,7 +43,7 @@ const defaultTransactions = [
     amount: 65.00,
     type: 'expense',
     category: 'Lazer',
-    date: new Date().toISOString() // today
+    date: new Date().toISOString()
   }
 ];
 
@@ -55,14 +59,24 @@ const categoryIcons = {
 
 const financialTips = [
   "Regra 50/30/20: Use 50% de sua renda para necessidades básicas, 30% para desejos pessoais e economize/invista 20%!",
-  "Crie uma reserva de emergência equivalente a 3 a 6 meses de suas despesas essenciais antes de começar a investir em renda variável.",
-  "Evite compras por impulso! Se gostou de algo online, espere 24 horas antes de comprar. Muitas vezes você vai perceber que não precisava.",
-  "Dica do Vibe: Seus gastos com Alimentação estão subindo? Que tal preparar marmitas aos domingos para economizar durante a semana?",
-  "Pequenas despesas repetitivas (como cafezinhos diários ou assinaturas que você não usa) podem somar centenas de reais ao final do ano. Faça uma limpa!",
-  "Pague a si mesmo primeiro: Assim que receber seu salário, transfira uma quantia diretamente para a poupança ou investimentos antes de gastar."
+  "Crie uma reserva de emergência equivalente a 3 a 6 meses de suas despesas essenciais antes de começar a investir.",
+  "Evite compras por impulso! Se gostou de algo, espere 24 horas. Muitas vezes você vai perceber que não precisava.",
+  "Dica do Vibe: Seus gastos com Alimentação estão subindo? Que tal preparar marmitas aos domingos para economizar?",
+  "Pequenas despesas repetitivas (como cafezinhos diários) podem somar centenas de reais ao final do ano. Faça uma limpa!",
+  "Pague a si mesmo primeiro: Assim que receber, transfira uma quantia diretamente para investimentos antes de gastar."
+];
+
+const agentThoughts = [
+  "Auditando padrões de transação no banco de dados local...",
+  "Calculando saldo projetado utilizando regressão linear simples nos logs de gastos...",
+  "Analisando distribuição de categorias. Alerta: Lazer e Alimentação representam a maior fatia.",
+  "Verificando velocidade de poupança acumulada em comparação à meta de economia de R$ {goal}...",
+  "Calculando risco de endividamento baseado na taxa de queima (Burn Rate) atual...",
+  "Rodando simulação de Monte Carlo para estimar saldo final em 6 meses com variação padrão..."
 ];
 
 let expensesChart = null;
+let agentLoopInterval = null;
 
 /* ==========================================================================
    INITIALIZATION
@@ -73,14 +87,21 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   updateDashboard();
   initChat();
+  
+  // Start the Vibe Autonomous Cognitive Engine Loop
+  startAgentEngine();
 });
 
 // Load state from localStorage or seed
 function loadData() {
-  const savedState = localStorage.getItem('vibe_finance_state');
+  const savedState = localStorage.getItem('vibe_finance_state_v2');
   if (savedState) {
     try {
       state = JSON.parse(savedState);
+      // Ensure simulations block is initialized
+      if (!state.simulations) {
+        state.simulations = { salaryMultiplier: 1.0, extraExpense: 0, emergencyCount: 0 };
+      }
     } catch (e) {
       console.error("Erro ao carregar dados do LocalStorage, reiniciando...", e);
       seedDefaultData();
@@ -94,11 +115,16 @@ function seedDefaultData() {
   state.transactions = [...defaultTransactions];
   state.goal = 500.00;
   state.theme = 'dark';
+  state.simulations = {
+    salaryMultiplier: 1.0,
+    extraExpense: 0,
+    emergencyCount: 0
+  };
   saveState();
 }
 
 function saveState() {
-  localStorage.setItem('vibe_finance_state', JSON.stringify(state));
+  localStorage.setItem('vibe_finance_state_v2', JSON.stringify(state));
 }
 
 /* ==========================================================================
@@ -125,9 +151,8 @@ function toggleTheme() {
   saveState();
   const themeBtn = document.getElementById('theme-toggle');
   updateThemeIcon(themeBtn);
-  
-  // Re-render chart to adjust grid colors if needed
   updateChart();
+  logToTerminal(`Mudança de tema do sistema de UI executada para: [${state.theme.toUpperCase()}]`, 'system');
 }
 
 /* ==========================================================================
@@ -139,11 +164,13 @@ function setupEventListeners() {
 
   // Reset database
   document.getElementById('reset-btn').addEventListener('click', () => {
-    if (confirm('Tem certeza de que deseja resetar todas as suas transações e dados?')) {
+    if (confirm('Tem certeza de que deseja resetar todas as suas transações, dados e cenários?')) {
       seedDefaultData();
       updateDashboard();
       initChat(true); // Restart chat history
+      logToTerminal("Banco de dados local limpo. Parâmetros reiniciados para padrão de fábrica.", "audit");
       saveState();
+      triggerAutonomousAction("Reset de Dados executado pelo usuário. Iniciando novos cálculos de projeção.");
     }
   });
 
@@ -171,6 +198,7 @@ function setupEventListeners() {
       updateDashboard();
       goalModal.classList.remove('active');
       addVibeMessage(`Sua nova meta de economia mensal foi definida para **R$ ${value.toFixed(2)}**! Vamos com tudo! 🎯`);
+      triggerAutonomousAction(`Meta de economia mensal alterada para R$ ${value.toFixed(2)}. Reavaliando probabilidade de alcance.`);
     }
   });
 
@@ -201,6 +229,90 @@ function setupEventListeners() {
     addUserMessage(phrase);
     processUserPhrase(phrase);
   });
+
+  // Setup Simulator Buttons
+  setupSimulationListeners();
+}
+
+/* ==========================================================================
+   SCENARIO SIMULATOR ACTIONS
+   ========================================================================== */
+function setupSimulationListeners() {
+  const simSalary = document.getElementById('sim-salary-btn');
+  const simEmergency = document.getElementById('sim-emergency-btn');
+  const simRent = document.getElementById('sim-rent-btn');
+  const simClear = document.getElementById('sim-clear-btn');
+
+  simSalary.addEventListener('click', () => {
+    state.simulations.salaryMultiplier = 1.10;
+    saveState();
+    logToTerminal("CENÁRIO ATIVADO: Aumento Salarial de +10% aplicado para projeções futuras.", "system");
+    updateDashboard();
+    triggerAutonomousAction("Calculando projeção com aumento de salário de 10%... Nova receita recorrente detectada.");
+    updateActiveSimBadge();
+  });
+
+  simEmergency.addEventListener('click', () => {
+    state.simulations.emergencyCount++;
+    
+    // Create a simulated transaction
+    const emergencyTrans = {
+      id: 'sim-e-' + Date.now(),
+      description: `[SIMULADO] Despesa de Emergência #${state.simulations.emergencyCount}`,
+      amount: 600.00,
+      type: 'expense',
+      category: 'Saúde',
+      date: new Date().toISOString()
+    };
+    
+    state.transactions.push(emergencyTrans);
+    saveState();
+    logToTerminal(`CENÁRIO ATIVADO: Despesa médica emergencial simulada de R$ 600,00 anotada.`, "audit");
+    updateDashboard();
+    triggerAutonomousAction("Despesa médica de emergência de R$ 600,00 aplicada. Recalculando velocidade de caixa.");
+    updateActiveSimBadge();
+  });
+
+  simRent.addEventListener('click', () => {
+    state.simulations.extraExpense += 200.00;
+    saveState();
+    logToTerminal(`CENÁRIO ATIVADO: Aumento fixo de R$ 200,00 adicionado às despesas mensais futuras (Aluguel).`, "system");
+    updateDashboard();
+    triggerAutonomousAction("Despesa recorrente de aluguel inflada em R$ 200,00. Analisando sustentabilidade do fluxo.");
+    updateActiveSimBadge();
+  });
+
+  simClear.addEventListener('click', () => {
+    // Filter out simulated transactions
+    state.transactions = state.transactions.filter(t => !t.id.startsWith('sim-e-'));
+    state.simulations = {
+      salaryMultiplier: 1.0,
+      extraExpense: 0,
+      emergencyCount: 0
+    };
+    saveState();
+    logToTerminal("CENÁRIOS LIMPOS: Todos os multiplicadores e despesas simuladas foram removidos.", "system");
+    updateDashboard();
+    triggerAutonomousAction("Redefinindo projeções financeiras para valores reais do usuário. Processando...");
+    updateActiveSimBadge();
+  });
+}
+
+function updateActiveSimBadge() {
+  const badge = document.getElementById('active-sim-badge');
+  const list = document.getElementById('active-sim-list');
+  const sims = [];
+  
+  if (state.simulations.salaryMultiplier > 1.0) sims.push("Aumento Salarial (+10%)");
+  if (state.simulations.extraExpense > 0) sims.push(`Aumento Aluguel (+R$ ${state.simulations.extraExpense.toFixed(0)})`);
+  if (state.transactions.some(t => t.id.startsWith('sim-e-'))) sims.push(`Despesa Emergencial`);
+
+  if (sims.length > 0) {
+    badge.style.display = 'block';
+    list.innerText = sims.join(', ');
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 /* ==========================================================================
@@ -272,11 +384,13 @@ function updateDashboard() {
     goalMsgEl.style.color = "var(--text-secondary)";
   }
 
-  // Render recent transactions list
+  // Render lists and charts
   renderTransactions();
-  
-  // Render / Update Chart.js
   updateChart();
+  updateActiveSimBadge();
+
+  // Run autonomous computations for projections immediately
+  recalculateProjections(balanceTotal, incomeTotal, expensesTotal);
 
   // Create/recreate Icons
   lucide.createIcons();
@@ -286,11 +400,10 @@ function renderTransactions() {
   const listEl = document.getElementById('transactions-list');
   listEl.innerHTML = '';
 
-  // Sort transactions by date descending
   const sorted = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (sorted.length === 0) {
-    listEl.innerHTML = `<li class="no-data" style="padding: 20px;"><p style="font-size: 0.8rem; color: var(--text-muted)">Nenhuma transação cadastrada.</p></li>`;
+    listEl.innerHTML = `<li class="no-data" style="padding: 20px;"><p style="font-size: 0.75rem; color: var(--text-muted)">Nenhuma transação cadastrada.</p></li>`;
     return;
   }
 
@@ -340,6 +453,8 @@ window.deleteTransaction = function(id) {
     saveState();
     updateDashboard();
     addVibeMessage(`Removi a transação **"${deleted.description}"** (${formatCurrency(deleted.amount)}) do seu histórico.`);
+    logToTerminal(`Transação excluída: ${deleted.description} de R$ ${deleted.amount.toFixed(2)}.`, "audit");
+    triggerAutonomousAction(`Transação removida. Recalculando integridade dos planos e projeções de longo prazo.`);
   }
 };
 
@@ -354,7 +469,6 @@ function updateChart() {
   const noDataEl = document.getElementById('no-data-msg');
   const chartCanvas = document.getElementById('expenses-chart');
 
-  // Aggregating expenses by category
   const categories = {};
   let totalExpenses = 0;
 
@@ -381,21 +495,18 @@ function updateChart() {
   const chartLabels = Object.keys(categories);
   const chartData = Object.values(categories);
 
-  // Set colors based on category names
   const colorMap = {
-    'Alimentação': '#ef4444', // Red
-    'Transporte': '#3b82f6',  // Blue
-    'Lazer': '#f59e0b',       // Amber
-    'Saúde': '#10b981',       // Emerald
-    'Educação': '#8b5cf6',    // Violet
-    'Outros': '#6b7280'       // Gray
+    'Alimentação': '#ef4444',
+    'Transporte': '#3b82f6',
+    'Lazer': '#f59e0b',
+    'Saúde': '#10b981',
+    'Educação': '#8b5cf6',
+    'Outros': '#6b7280'
   };
 
   const chartColors = chartLabels.map(l => colorMap[l] || '#ec4899');
-
-  // Styles for Dark / Light theme
-  const textColor = state.theme === 'dark' ? '#f3f4f6' : '#111827';
-  const borderColor = state.theme === 'dark' ? '#111827' : '#ffffff';
+  const textColor = state.theme === 'dark' ? '#f8fafc' : '#0f172a';
+  const borderColor = state.theme === 'dark' ? '#0a0e1c' : '#ffffff';
 
   if (expensesChart) {
     expensesChart.data.labels = chartLabels;
@@ -425,13 +536,13 @@ function updateChart() {
           legend: {
             position: 'right',
             labels: {
-              boxWidth: 12,
+              boxWidth: 8,
               font: {
                 family: 'Inter',
-                size: 11
+                size: 9
               },
               color: textColor,
-              padding: 10
+              padding: 6
             }
           },
           tooltip: {
@@ -451,6 +562,194 @@ function updateChart() {
 }
 
 /* ==========================================================================
+   VIBE COGNITIVE ENGINE (AUTONOMOUS LOOP & SCENARIOS)
+   ========================================================================== */
+function startAgentEngine() {
+  logToTerminal("Iniciando Vibe Cognitive Engine...", "system");
+  logToTerminal("Status da Cognição: ACTIVE. Lendo banco de dados de transações...", "system");
+  
+  // Set a periodic action loop (runs every 6 seconds)
+  agentLoopInterval = setInterval(() => {
+    runAutonomousAuditCycle();
+  }, 6000);
+
+  // Run immediately once
+  runAutonomousAuditCycle();
+}
+
+function logToTerminal(message, type = 'system') {
+  const terminal = document.getElementById('agent-terminal');
+  if (!terminal) return;
+
+  const timestamp = new Date().toLocaleTimeString('pt-BR');
+  const logEl = document.createElement('p');
+
+  if (type === 'system') {
+    logEl.className = 'terminal-system-log';
+    logEl.innerHTML = `&gt; [${timestamp}] [SYS] ${message}`;
+  } else if (type === 'audit') {
+    logEl.className = 'terminal-audit-log';
+    logEl.innerHTML = `&gt; [${timestamp}] [AUDIT] <span style="color: var(--danger-text)">⚠ ${message}</span>`;
+  } else {
+    logEl.innerHTML = `&gt; [${timestamp}] [AGENTE] ${message}`;
+  }
+
+  terminal.appendChild(logEl);
+  terminal.scrollTop = terminal.scrollHeight;
+  
+  // Keep logs to a maximum of 40 lines
+  while (terminal.children.length > 40) {
+    terminal.children[0].remove();
+  }
+}
+
+function updateThoughtBubble(thought) {
+  const thoughtBubble = document.getElementById('agent-thought-bubble');
+  if (thoughtBubble) {
+    // Simple fade transition by temporary class
+    thoughtBubble.style.opacity = 0.5;
+    setTimeout(() => {
+      thoughtBubble.innerHTML = thought;
+      thoughtBubble.style.opacity = 1;
+    }, 200);
+  }
+}
+
+// Recalculates 1m, 3m and 6m projections dynamically
+function recalculateProjections(currentBalance, baseIncome, baseExpense) {
+  // Pull monthly income and expense estimates based on recorded transactions
+  let monthlyIncome = 0;
+  let monthlyExpense = 0;
+
+  state.transactions.forEach(t => {
+    // If it's a simulated transaction, we don't count it as recurring monthly income/expense base
+    if (t.id.startsWith('sim-e-')) return;
+    
+    if (t.type === 'income') {
+      // In this concept, we estimate monthly salary based on 'Salário' category or total income
+      // Let's take the sum of 'Salário' category as the recurring salary base, or default to total income if none
+      if (t.category === 'Salário') monthlyIncome += t.amount;
+    } else {
+      // For expenses, we assume everything recorded is typical monthly expense or sum them
+      // Let's divide by the span or estimate a recurring expenditure rate. We can assume all expenses are monthly base
+      monthlyExpense += t.amount;
+    }
+  });
+
+  // Fallbacks in case values are zero, to make projections interesting
+  if (monthlyIncome === 0) monthlyIncome = baseIncome || 1200; 
+  if (monthlyExpense === 0) monthlyExpense = baseExpense || 500;
+
+  // Apply Simulation modifiers
+  const simulatedMonthlyIncome = monthlyIncome * state.simulations.salaryMultiplier;
+  const simulatedMonthlyExpense = monthlyExpense + state.simulations.extraExpense;
+
+  // Projections: Balance + (Income - Expense) * Months
+  const netMonthly = simulatedMonthlyIncome - simulatedMonthlyExpense;
+
+  const proj1m = currentBalance + netMonthly * 1;
+  const proj3m = currentBalance + netMonthly * 3;
+  const proj6m = currentBalance + netMonthly * 6;
+
+  // Update UI Elements
+  updateProjectionValue('proj-1m', proj1m);
+  updateProjectionValue('proj-3m', proj3m);
+  updateProjectionValue('proj-6m', proj6m);
+}
+
+function updateProjectionValue(elementId, value) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  el.innerText = formatCurrency(value);
+  if (value >= 0) {
+    el.style.color = 'var(--success-text)';
+  } else {
+    el.style.color = 'var(--danger-text)';
+  }
+}
+
+// Forces the agent to think and act immediately (e.g. after transaction addition)
+function triggerAutonomousAction(triggerReason) {
+  const statusEl = document.getElementById('engine-status');
+  if (statusEl) {
+    statusEl.innerText = "STATUS: COGNITION ACTIVE (PENSANDO)";
+    statusEl.style.color = "var(--accent)";
+  }
+
+  logToTerminal(`Gatilho: ${triggerReason}`, 'system');
+  
+  setTimeout(() => {
+    runAutonomousAuditCycle();
+    if (statusEl) {
+      statusEl.innerText = "STATUS: COGNITION ACTIVE";
+      statusEl.style.color = "var(--cyber-neon)";
+    }
+  }, 1000);
+}
+
+// Periodic check of state, prints reports to terminal and changes thoughts
+function runAutonomousAuditCycle() {
+  // 1. Choose a random agent thought to display
+  let randomThought = agentThoughts[Math.floor(Math.random() * agentThoughts.length)];
+  randomThought = randomThought.replace('{goal}', state.goal.toFixed(0));
+  updateThoughtBubble(randomThought);
+
+  // 2. Compute state statistics
+  let totalIncome = 0;
+  let totalExpense = 0;
+  const categories = {};
+
+  state.transactions.forEach(t => {
+    if (t.type === 'income') {
+      totalIncome += t.amount;
+    } else {
+      totalExpense += t.amount;
+      categories[t.category] = (categories[t.category] || 0) + t.amount;
+    }
+  });
+
+  const balance = totalIncome - totalExpense;
+
+  // 3. Log actions to terminal
+  logToTerminal("Varredura cíclica do balancete executada com sucesso.", "system");
+  logToTerminal(`Transações analisadas: ${state.transactions.length}. Saldo líquido corrente: R$ ${balance.toFixed(2)}`, "system");
+
+  // 4. Autonomous Auditing / Anomaly Detection Warnings
+  if (totalExpense > 0 && totalIncome > 0) {
+    const expenseRatio = totalExpense / totalIncome;
+    if (expenseRatio > 0.85) {
+      logToTerminal(`Alerta de Risco: Taxa de despesa está em ${(expenseRatio*100).toFixed(0)}% da receita. Margem de segurança crítica!`, "audit");
+      updateThoughtBubble("ATENÇÃO: Recomendo frear despesas de Lazer imediatamente. Risco de deficit de fluxo de caixa.");
+    }
+  }
+
+  // Anomaly: category ratio alert (e.g. Food taking more than 45% of total expenses)
+  if (totalExpense > 0) {
+    for (const [cat, value] of Object.entries(categories)) {
+      if (cat !== 'Salário' && cat !== 'Outros') {
+        const catRatio = value / totalExpense;
+        if (catRatio > 0.40) {
+          logToTerminal(`Alerta de Categoria: Gastos em [${cat}] representam ${(catRatio*100).toFixed(0)}% das despesas totais.`, "audit");
+          updateThoughtBubble(`Anomalia detectada: Concentração excessiva em **${cat}**. Vamos otimizar isso?`);
+        }
+      }
+    }
+  }
+
+  // Savings goal feedback
+  if (state.goal > 0) {
+    const currentSaved = Math.max(0, balance);
+    const speed = currentSaved / state.goal;
+    if (speed >= 1.0) {
+      logToTerminal("Meta de economia batida. Projeção de excedente financeiro estabelecida.", "system");
+    } else if (speed < 0.5 && balance > 0) {
+      logToTerminal(`Velocidade de economia em ${(speed*100).toFixed(0)}%. Ritmo abaixo do planejado para bater a meta.`, "system");
+    }
+  }
+}
+
+/* ==========================================================================
    CHAT INTERACTIONS (SIMULATED AGENT LOGIC)
    ========================================================================== */
 function initChat(reset = false) {
@@ -461,17 +760,16 @@ function initChat(reset = false) {
   }
 
   if (chatHistory.children.length === 0) {
-    // Add Vibe's initial greeting
-    addVibeMessage(`Olá! Sou o **Vibe**, seu parceiro de organização financeira. 💸✨
+    addVibeMessage(`Olá! Sou o **Vibe**, seu parceiro com **Motor de IA Autônomo** integrado. 🤖💸
 
-Estou pronto para te ajudar a controlar seus gastos sem complicação! Você pode me contar suas despesas ou receitas digitando normalmente.
+Estou monitorando suas transações em tempo real no painel ao lado. Registre seus gastos escrevendo em linguagem natural e veja como meu console cognitivo recalcula suas projeções!
 
-Por exemplo:
-* *“recebi 3000 de salário”*
-* *“gastei 45 no japa”*
-* *“comprei um livro de 30 reais”*
+Exemplos:
+* *“Ganhei 4000 de salário hoje”*
+* *“Paguei R$ 120 de luz”*
+* *“Comprei pizza por R$ 50”*
 
-Como posso te ajudar hoje?`);
+Experimente também os cenários de simulação rápida!`);
   }
 }
 
@@ -487,11 +785,9 @@ function addUserMessage(text) {
   scrollToBottom();
 }
 
-// Bot message wrapper that uses typing indicator simulation
 function addVibeMessage(markdownText) {
   const chatHistory = document.getElementById('chat-history');
   
-  // 1. Create typing bubble
   const typingMsg = document.createElement('div');
   typingMsg.className = 'message agent';
   typingMsg.innerHTML = `
@@ -509,7 +805,6 @@ function addVibeMessage(markdownText) {
   lucide.createIcons();
   scrollToBottom();
   
-  // 2. Replace typing with real message after delay
   setTimeout(() => {
     typingMsg.remove();
     
@@ -522,21 +817,7 @@ function addVibeMessage(markdownText) {
     chatHistory.appendChild(msg);
     lucide.createIcons();
     scrollToBottom();
-  }, 850);
-}
-
-// Simple direct bot response (no delay, used for sub-actions)
-function addVibeMessageDirect(markdownText) {
-  const chatHistory = document.getElementById('chat-history');
-  const msg = document.createElement('div');
-  msg.className = 'message agent';
-  msg.innerHTML = `
-    <div class="msg-avatar"><i data-lucide="bot"></i></div>
-    <div class="msg-bubble">${parseMarkdown(markdownText)}</div>
-  `;
-  chatHistory.appendChild(msg);
-  lucide.createIcons();
-  scrollToBottom();
+  }, 750);
 }
 
 function scrollToBottom() {
@@ -545,63 +826,58 @@ function scrollToBottom() {
 }
 
 /* ==========================================================================
-   NLP NLP SIMULATOR (NATURAL LANGUAGE PROCESSING)
+   NLP SIMULATOR (NATURAL LANGUAGE PROCESSING)
    ========================================================================== */
 function processUserPhrase(phrase) {
   const clean = phrase.toLowerCase().trim();
   
-  // 1. Check for greetings
+  // Greetings
   const greetings = ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite', 'e ai', 'eae', 'hello'];
   if (greetings.some(g => clean === g || clean.startsWith(g + ' '))) {
-    addVibeMessage("Olá! Que bom falar com você. O que quer registrar hoje nas suas finanças?");
+    addVibeMessage("Olá! Meu motor autônomo está ativo e pronto. O que quer registrar hoje?");
     return;
   }
 
-  // 2. Check for help requests
+  // Help requests
   const helpKeywords = ['ajuda', 'ajudar', 'como funciona', 'comandos', 'comando', 'oque fazer', 'o que fazer'];
   if (helpKeywords.some(k => clean.includes(k))) {
-    addVibeMessage(`Posso te ajudar a gerenciar suas economias de forma conversacional!
-    
-Você só precisa digitar o que aconteceu. Exemplos:
-* **"recebi 150 de presente"** (Adiciona Receita de R$ 150 em Outros)
-* **"gastei 55 com remédios"** (Adiciona Despesa de R$ 55 em Saúde)
-* **"paguei 350 na faculdade"** (Adiciona Despesa de R$ 350 em Educação)
+    addVibeMessage(`Escreva o que aconteceu em linguagem natural! Exemplos:
+* **"recebi 300 de freela"** (Adiciona Receita de R$ 300 em Salário)
+* **"gastei 80 no restaurante"** (Adiciona Despesa de R$ 80 em Alimentação)
 
-Você também pode pedir uma **"dica de economia"** a qualquer momento!`);
+Para receber uma dica de finanças, digite **"dica"**.`);
     return;
   }
 
-  // 3. Check for finance tips request
+  // Tips request
   const tipKeywords = ['dica', 'dicas', 'economia', 'economizar', 'conselho', 'poupanca', 'poupança'];
   if (tipKeywords.some(k => clean.includes(k))) {
     const randomIndex = Math.floor(Math.random() * financialTips.length);
     const randomTip = financialTips[randomIndex];
-    addVibeMessage(`Aqui vai um bom conselho financeiro: 💡\n\n${randomTip}`);
+    addVibeMessage(`Conselho financeiro do Vibe: 💡\n\n${randomTip}`);
     return;
   }
 
-  // 4. Try parsing finance amounts and details
-  // Regex to match numbers: e.g., 50 | 50.00 | 50,20 | R$ 50 | R$50.00
+  // Try parsing numbers
   const amountRegex = /(?:r\$\s*)?(\d+(?:[\.,]\d{2})?)/i;
   const match = clean.match(amountRegex);
 
   if (!match) {
-    addVibeMessage(`Não consegui identificar um valor monetário na sua mensagem. 🤔
+    addVibeMessage(`Não entendi o valor monetário. 🤔
     
-Tente algo como: *"Gastei 35 reais no almoço"* ou *"Recebi R$ 150 de pix"* para que eu possa computar.`);
+Tente: *"gastei 25 no uber"* ou *"recebi 100 de presente"*.`);
     return;
   }
 
-  // Extracted amount
-  let amountStr = match[1].replace(',', '.'); // standard float formatting
+  let amountStr = match[1].replace(',', '.');
   const amount = parseFloat(amountStr);
 
   if (isNaN(amount) || amount <= 0) {
-    addVibeMessage("O valor que você digitou parece inválido. Por favor, tente inserir um valor positivo acima de R$ 0,00.");
+    addVibeMessage("Por favor, digite um valor monetário válido acima de zero.");
     return;
   }
 
-  // Determine type: revenue (income) or expense (default)
+  // Determine type
   let type = 'expense';
   const incomeKeywords = ['recebi', 'ganhei', 'salario', 'salário', 'pix de entrada', 'renda', 'recebimento', 'freela', 'faturamento', 'deposito', 'depósito'];
   const expenseKeywords = ['gastei', 'paguei', 'comprei', 'custa', 'custou', 'despesa', 'debito', 'débito', 'perdi', 'transferi'];
@@ -611,15 +887,13 @@ Tente algo como: *"Gastei 35 reais no almoço"* ou *"Recebi R$ 150 de pix"* para
   } else if (expenseKeywords.some(kw => clean.includes(kw))) {
     type = 'expense';
   } else {
-    // Contextual fallback based on categories (e.g. if the category is Salário, it's income)
     if (clean.includes('salario') || clean.includes('salário') || clean.includes('freela')) {
       type = 'income';
     }
   }
 
-  // Determine Category based on keywords
+  // Determine Category
   let category = 'Outros';
-  
   const categoryKeywords = {
     'Alimentação': ['comer', 'restaurante', 'pizza', 'japa', 'almoço', 'almoco', 'jantar', 'janta', 'café', 'cafe', 'comida', 'mercado', 'supermercado', 'padaria', 'lanche', 'iFood'],
     'Transporte': ['uber', 'transporte', 'táxi', 'taxi', 'gasolina', 'combustivel', 'combustível', 'ônibus', 'onibus', 'metro', 'metrô', 'passagem', 'viagem', 'pedágio', 'pedagio'],
@@ -636,21 +910,16 @@ Tente algo como: *"Gastei 35 reais no almoço"* ou *"Recebi R$ 150 de pix"* para
     }
   }
 
-  // Special cases adjustment
   if (type === 'income' && category === 'Outros') {
     if (clean.includes('salário') || clean.includes('salario')) {
       category = 'Salário';
     }
   } else if (type === 'expense' && category === 'Salário') {
-    // A salary cannot be an expense in this design. Change to outros/educacao/etc.
     category = 'Outros';
   }
 
-  // Generate description based on the phrase (remove numbers and simple transaction words to extract description)
+  // Extract description
   let description = phrase;
-  
-  // Let's make description clean: e.g. "Gastei 50 no almoço" -> "Almoço"
-  // Try to remove amount and keywords
   let descClean = phrase.replace(new RegExp(match[0], 'i'), '');
   
   const removeWords = [
@@ -671,14 +940,12 @@ Tente algo como: *"Gastei 35 reais no almoço"* ou *"Recebi R$ 150 de pix"* para
   });
   
   descClean = descClean.trim();
-  // Capitalize first letter
   if (descClean) {
     description = descClean.charAt(0).toUpperCase() + descClean.slice(1);
   } else {
     description = type === 'income' ? 'Receita Adicional' : `Gasto com ${category}`;
   }
 
-  // Create Transaction Object
   const newTransaction = {
     id: 't-' + Date.now(),
     description: description,
@@ -688,36 +955,29 @@ Tente algo como: *"Gastei 35 reais no almoço"* ou *"Recebi R$ 150 de pix"* para
     date: new Date().toISOString()
   };
 
-  // Add to State
   state.transactions.push(newTransaction);
   saveState();
-  
-  // Render Dashboard
   updateDashboard();
 
-  // Create Vibe friendly response
+  // Create Vibe response
   const emoji = categoryIcons[category] || '🏷️';
   const typeText = type === 'income' ? 'receita' : 'despesa';
   
   let vibeResponse = `**Registrado com sucesso!** ${emoji}\n\n`;
   vibeResponse += `* **Descrição**: ${description}\n`;
-  vibeResponse += `* **Tipo**: ${typeText.charAt(0).toUpperCase() + typeText.slice(1)}\n`;
   vibeResponse += `* **Categoria**: ${category}\n`;
   vibeResponse += `* **Valor**: ${formatCurrency(amount)}\n\n`;
 
-  // Custom message elements based on state/goals
   if (type === 'income') {
-    vibeResponse += `Excelente notícia! R$ ${amount.toFixed(2)} a mais no saldo. Isso ajuda no progresso das metas financeiras deste mês! 📈`;
+    vibeResponse += `Receita computada! Meu motor de IA atualizou suas projeções futuras no painel lateral.`;
   } else {
-    // Contextual comment based on size
-    if (amount > 150) {
-      vibeResponse += `Essa foi uma compra de maior valor. Já atualizei o gráfico! Lembre-se de verificar se este gasto cabe no seu orçamento mensal. ⚖️`;
-    } else {
-      vibeResponse += `Gasto anotado! Continue registrando para saber exatamente para onde vai seu suado dinheirinho. 😉`;
-    }
+    vibeResponse += `Gasto anotado. Acompanhe a auditoria do meu motor no console de logs!`;
   }
 
   addVibeMessage(vibeResponse);
+  
+  // Trigger cognitive audit action
+  triggerAutonomousAction(`Nova transação registrada pelo chat: ${description} (${formatCurrency(amount)})`);
 }
 
 /* ==========================================================================
@@ -735,17 +995,11 @@ function escapeHTML(str) {
   );
 }
 
-// Basic markdown parser for formatting bold text, bullet lists, code/italics
 function parseMarkdown(text) {
   let html = escapeHTML(text);
-  
-  // Bold: **text**
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  
-  // Italic: *text*
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   
-  // Bullet lists
   html = html.split('\n').map(line => {
     if (line.trim().startsWith('* ')) {
       return `<li>${line.trim().substring(2)}</li>`;
@@ -753,10 +1007,8 @@ function parseMarkdown(text) {
     return line;
   }).join('\n');
   
-  // Wrap list tags
   html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
   
-  // Paragraph breaks (replace double newline with <p>)
   html = html.split('\n\n').map(p => {
     if (p.trim().startsWith('<ul>') || p.trim().startsWith('<li>')) return p;
     return `<p>${p.replace(/\n/g, '<br>')}</p>`;

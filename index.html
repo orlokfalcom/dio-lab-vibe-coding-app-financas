@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vibe Finanças | Organização Financeira Pessoal com Vibe Coding</title>
-  <!-- Google Fonts: Outfit and Inter -->
+  <title>Vibe Finanças v2 | Organização com Motor de IA Autônomo</title>
+  <!-- Google Fonts: Outfit, Inter and JetBrains Mono (for terminal) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <!-- Lucide Icons via CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js via CDN -->
@@ -21,11 +21,11 @@
     <header class="app-header">
       <div class="logo-area">
         <div class="logo-icon">
-          <i data-lucide="sparkles"></i>
+          <i data-lucide="cpu"></i>
         </div>
         <div class="logo-text">
-          <h1>Vibe Finanças</h1>
-          <span>Vibe Coding Challenge</span>
+          <h1>Vibe Finanças <span class="badge badge-cyber">v2 Autonomous</span></h1>
+          <span>Vibe Coding & Cognitive Engine</span>
         </div>
       </div>
       <div class="header-actions">
@@ -39,9 +39,10 @@
       </div>
     </header>
 
-    <!-- Main Content Grid -->
-    <main class="app-main">
-      <!-- Coluna Esquerda: Dashboard -->
+    <!-- Main Content Grid (3 Columns) -->
+    <main class="app-main custom-3-col">
+      
+      <!-- COLUNA 1: DASHBOARD FINANCEIRO -->
       <section class="dashboard-section glass-panel">
         <div class="section-header">
           <i data-lucide="layout-dashboard" class="header-icon"></i>
@@ -91,7 +92,7 @@
           <!-- Metas -->
           <div class="goals-container glass-subpanel">
             <div class="goal-header">
-              <h4>Meta de Economia Mensal</h4>
+              <h4>Meta de Economia</h4>
               <button id="edit-goal-btn" class="btn-edit" title="Editar Meta">
                 <i data-lucide="edit-3"></i>
               </button>
@@ -105,7 +106,7 @@
                 <div id="goal-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
               </div>
               <div id="goal-status-msg" class="goal-message">
-                Configure receitas e despesas para ver o progresso da meta!
+                Adicione receitas e despesas para ver o progresso!
               </div>
             </div>
           </div>
@@ -125,7 +126,7 @@
         </div>
       </section>
 
-      <!-- Coluna Direita: Chat com o Agente -->
+      <!-- COLUNA 2: CHAT COM O AGENTE -->
       <section class="chat-section glass-panel">
         <div class="section-header chat-header">
           <div class="agent-profile">
@@ -134,40 +135,132 @@
               <span class="status-dot"></span>
             </div>
             <div class="agent-info">
-              <h2>Vibe</h2>
+              <h2>Vibe Chat</h2>
               <span class="status-text">Online & Atento</span>
             </div>
           </div>
-          <span class="badge badge-accent">Agente de Finanças</span>
+          <span class="badge badge-accent">Agente de Conversa</span>
         </div>
 
         <!-- Histórico de Mensagens -->
         <div class="chat-history" id="chat-history">
-          <!-- Mensagens iniciais do Agente inseridas via JS -->
+          <!-- Inserido dinamicamente -->
         </div>
 
         <!-- Sugestões de Transações Rápidas -->
         <div class="suggestions-area">
-          <span class="suggestion-label">Experimente testar:</span>
+          <span class="suggestion-label">Teste rápido:</span>
           <div class="suggestions-list">
-            <button class="btn-suggestion" data-phrase="Ganhei R$ 2500 de salário hoje">💰 Recebi salário</button>
-            <button class="btn-suggestion" data-phrase="Gastei R$ 45 com pizza ontem">🍕 Gastei com pizza</button>
-            <button class="btn-suggestion" data-phrase="Paguei 60 reais de Uber">🚗 Paguei Uber</button>
-            <button class="btn-suggestion" data-phrase="Comprei um curso por R$ 120">📚 Comprei curso</button>
-            <button class="btn-suggestion" data-phrase="Dica de economia para hoje">💡 Pedir dica de economia</button>
+            <button class="btn-suggestion" data-phrase="Ganhei R$ 3500 de salário hoje">💰 Recebi salário</button>
+            <button class="btn-suggestion" data-phrase="Gastei R$ 60 com almoço">🍕 Gastei almoço</button>
+            <button class="btn-suggestion" data-phrase="Paguei 35 reais de Uber">🚗 Paguei Uber</button>
+            <button class="btn-suggestion" data-phrase="Dica de economia para hoje">💡 Pedir dica</button>
           </div>
         </div>
 
         <!-- Input de Mensagem -->
         <div class="chat-input-area">
           <form id="chat-form" class="chat-form">
-            <input type="text" id="chat-input" placeholder="Escreva o que você gastou ou ganhou... (ex: gastei 50 no mercado)" autocomplete="off">
+            <input type="text" id="chat-input" placeholder="Anote gastos/receitas em linguagem natural..." autocomplete="off">
             <button type="submit" class="btn btn-primary btn-icon" id="send-btn">
               <i data-lucide="send"></i>
             </button>
           </form>
         </div>
       </section>
+
+      <!-- COLUNA 3: MOTOR AUTÔNOMO (VIBE COGNITIVE ENGINE) -->
+      <section class="agent-engine-section glass-panel">
+        <div class="section-header engine-header">
+          <div class="engine-title-area">
+            <div class="engine-icon-wrapper pulse-animation">
+              <i data-lucide="activity" class="engine-pulse-icon"></i>
+            </div>
+            <div>
+              <h2>Vibe Cognitive Engine</h2>
+              <span class="status-text" id="engine-status">STATUS: COGNITION ACTIVE</span>
+            </div>
+          </div>
+          <span class="badge badge-neon">Simulação Ativa</span>
+        </div>
+
+        <!-- Pensamentos da IA em Tempo Real -->
+        <div class="agent-thought-container glass-subpanel">
+          <div class="thought-header">
+            <i data-lucide="brain"></i>
+            <h4>Fluxo de Raciocínio (Agent Thoughts)</h4>
+          </div>
+          <p id="agent-thought-bubble" class="thought-bubble">
+            Aguardando interações para iniciar auditoria...
+          </p>
+        </div>
+
+        <!-- Terminal de Logs do Agente -->
+        <div class="agent-terminal-wrapper glass-subpanel">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span>vibe-agent-console.log</span>
+            <i data-lucide="terminal" class="terminal-icon"></i>
+          </div>
+          <div id="agent-terminal" class="agent-terminal">
+            <!-- Logs inseridos em tempo real pelo JS -->
+          </div>
+        </div>
+
+        <!-- Projeções Financeiras Autônomas -->
+        <div class="projections-section">
+          <h4>Projeções Financeiras Autônomas</h4>
+          <div class="projection-cards">
+            <div class="projection-card">
+              <span class="proj-time">Próximo Mês</span>
+              <h5 id="proj-1m" class="proj-val">R$ 0,00</h5>
+            </div>
+            <div class="projection-card">
+              <span class="proj-time">Em 3 Meses</span>
+              <h5 id="proj-3m" class="proj-val">R$ 0,00</h5>
+            </div>
+            <div class="projection-card">
+              <span class="proj-time">Em 6 Meses</span>
+              <h5 id="proj-6m" class="proj-val">R$ 0,00</h5>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulador de Cenários -->
+        <div class="simulation-section glass-subpanel">
+          <div class="simulation-header">
+            <i data-lucide="sliders"></i>
+            <h4>Central de Simulação de Cenários</h4>
+          </div>
+          <p class="simulation-desc">Adicione eventos simulados para testar o reajuste preditivo da IA.</p>
+          <div class="simulation-actions-grid">
+            <button class="btn btn-sim" id="sim-salary-btn">
+              <i data-lucide="trending-up"></i>
+              <span>+10% Salário</span>
+            </button>
+            <button class="btn btn-sim" id="sim-emergency-btn">
+              <i data-lucide="alert-triangle"></i>
+              <span>Despesa Emergência</span>
+            </button>
+            <button class="btn btn-sim" id="sim-rent-btn">
+              <i data-lucide="home"></i>
+              <span>+R$ 200 Aluguel</span>
+            </button>
+            <button class="btn btn-sim" id="sim-clear-btn" title="Limpar Simulações">
+              <i data-lucide="x-circle"></i>
+              <span>Limpar Cenários</span>
+            </button>
+          </div>
+          <div id="active-sim-badge" class="active-sim-badge" style="display: none;">
+            Cenários ativos: <span id="active-sim-list">Nenhum</span>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
